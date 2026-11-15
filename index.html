@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вільні, гідні та толерантні</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: {
+                            50: '#F0F9FF',
+                            100: '#E0F2FE',
+                            500: '#0EA5E9',
+                            600: '#0284C7',
+                            800: '#075985'
+                        },
+                        accent: {
+                            100: '#FEF9C3',
+                            500: '#EAB308',
+                            600: '#CA8A04'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; overflow: hidden; background-color: #F8FAFC; }
+        
+        /* Animations */
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse-fast { animation: pulse 0.5s infinite; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb { background: #bae6fd; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #7dd3fc; }
+
+        /* Emoji Card Flip */
+        .emoji-card {
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .emoji-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(14, 165, 233, 0.2); }
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white shadow-md py-4 px-6 shrink-0 z-50 border-b border-primary-100">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <span class="text-4xl md:text-5xl">🇺🇦</span>
+                <h1 class="text-xl md:text-3xl font-black text-slate-800 tracking-tight">
+                    Вільні, гідні та <span class="text-primary-600">толерантні</span>
+                </h1>
+            </div>
+            <div class="bg-accent-100 text-accent-600 px-5 py-2 rounded-2xl font-bold text-2xl border-2 border-accent-200 shadow-sm">
+                Бали: <span id="score-display">0</span>/12
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="max-w-7xl mx-auto w-full flex-grow flex flex-col md:flex-row gap-6 p-4 md:p-6 overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-full md:w-1/3 lg:w-1/4 shrink-0 overflow-y-auto bg-white rounded-3xl shadow-sm border-2 border-slate-100 p-4 flex flex-col gap-3" id="nav-container">
+            <!-- Navigation buttons rendered here -->
+        </aside>
+
+        <!-- Content Area -->
+        <main class="w-full md:w-2/3 lg:w-3/4 bg-white rounded-3xl shadow-sm border-2 border-slate-100 p-6 md:p-10 overflow-y-auto relative" id="content-area">
+            <!-- Dynamic content rendered here -->
+        </main>
+    </div>
+
+    <script>
+        // Global State
+        let activeBlockId = 1;
+        let score = 0;
+        let answeredQuizzes = new Set();
+
+        // Simulator States (New)
+        const balanceQuestions = [
+            { text: "Здобувати освіту", isRight: true },
+            { text: "Не порушувати закони", isRight: false },
+            { text: "Вільний вибір професії", isRight: true },
+            { text: "Захищати Батьківщину", isRight: false },
+            { text: "Висловлювати власну думку", isRight: true }
+        ];
+        let currentBalance = 0;
+        let balanceScoreVal = 0;
+        let lightsCount = 0;
+
+        let scrambleWord = "ПОВАГА";
+        let currentScramble = "";
+        let clickedLetters = [];
+
+        const fakeNews = [
+            { title: "ШОК! Знайдено ліки від усіх хвороб, достатньо лише...", isFake: true },
+            { title: "Українські школярі перемогли на міжнародній олімпіаді", isFake: false },
+            { title: "Розіграш 1000 iPhone! Надішли свій пароль, щоб виграти!", isFake: true }
+        ];
+        let currentFake = 0;
+        let fakeScore = 0;
+        
+        let toxicLeft = 2;
+
+        const blocks = [
+            {
+                id: 1,
+                title: "1. Гідність і Свобода",
+                icon: "🕊️",
+                render: () => `
+                    <div class="fade-in max-w-4xl mx-auto pb-10">
+                        <h2 class="text-3xl md:text-5xl font-black text-slate-800 mb-6 flex items-center gap-4">
+                            🕊️ День Гідності та Свободи
+                        </h2>
+                        
+                        <div class="bg-gradient-to-br from-blue-50 to-yellow-50 p-8 rounded-3xl border-2 border-primary-100 mb-8 shadow-sm">
+                            <p class="text-2xl text-slate-700 leading-relaxed mb-4">
+                                <b>21 листопада</b> ми відзначаємо День Гідності та Свободи. Це день, коли українці двічі довели, що для них означає свобода вибору та демократія (Помаранчева революція 2004 року та Революція Гідності 2013 року).
+                            </p>
+                            <p class="text-xl text-slate-600">
+                                Свобода — це не лише можливість робити те, що хочеться, а й <b>відповідальність</b>. А гідність — це самоповага, яка не дозволяє терпіти приниження та порушення прав.
+                            </p>
+                        </div>
+
+                        <!-- Simulator 1: Balance (Rights vs Responsibilities) -->
+                        <div class="bg-sky-900 text-white p-8 rounded-3xl border-4 border-sky-600 shadow-xl text-center relative overflow-hidden mb-8">
+                            <h3 class="font-black text-3xl mb-2 text-accent-500 relative z-10">⚖️ Челендж 1: Терези Громадянина</h3>
+                            <p class="text-xl text-slate-300 mb-8 relative z-10">Справжня свобода потребує балансу. Визнач, що перед тобою: право чи обов'язок?</p>
+                            
+                            <div class="text-3xl font-bold bg-sky-800 p-8 rounded-2xl mb-8 border border-sky-700 shadow-inner" id="balance-text">
+                                Здобувати освіту
+                            </div>
+                            
+                            <div class="flex flex-col sm:flex-row gap-4 justify-center" id="balance-btns">
+                                <button onclick="checkBalance(true)" class="px-10 py-5 bg-sky-600 hover:bg-sky-500 text-white font-black text-2xl rounded-2xl transition-all shadow-[0_6px_0_#0369A1] active:translate-y-1 active:shadow-none">Це моє ПРАВО</button>
+                                <button onclick="checkBalance(false)" class="px-10 py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-2xl rounded-2xl transition-all shadow-[0_6px_0_#3730A3] active:translate-y-1 active:shadow-none">Це ОБОВ'ЯЗОК</button>
+                            </div>
+                            
+                            <div id="balance-result" class="hidden mt-8 text-2xl font-bold text-accent-400 relative z-10 animate-bounce"></div>
+                        </div>
+
+                        <!-- Simulator 2: Lights -->
+                        <div class="bg-slate-800 text-white p-8 rounded-3xl border-4 border-slate-600 shadow-xl text-center relative overflow-hidden mb-8">
+                            <h3 class="font-black text-3xl mb-2 text-accent-400">🕯️ Челендж 2: Світло Єдності</h3>
+                            <p class="text-xl text-slate-300 mb-8">Під час Революції Гідності тисячі ліхтариків освітили темряву. Клікни на кожен, щоб запалити!</p>
+                            
+                            <div class="flex flex-wrap justify-center gap-6 text-6xl mb-6">
+                                <span class="cursor-pointer grayscale opacity-50 hover:opacity-100 transition-all duration-300" onclick="turnOnLight(this)">💡</span>
+                                <span class="cursor-pointer grayscale opacity-50 hover:opacity-100 transition-all duration-300" onclick="turnOnLight(this)">💡</span>
+                                <span class="cursor-pointer grayscale opacity-50 hover:opacity-100 transition-all duration-300" onclick="turnOnLight(this)">💡</span>
+                                <span class="cursor-pointer grayscale opacity-50 hover:opacity-100 transition-all duration-300" onclick="turnOnLight(this)">💡</span>
+                                <span class="cursor-pointer grayscale opacity-50 hover:opacity-100 transition-all duration-300" onclick="turnOnLight(this)">💡</span>
+                            </div>
+                            
+                            <div id="lights-result" class="hidden mt-6 text-2xl font-bold text-accent-400"></div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 2,
+                title: "2. Мистецтво Толерантності",
+                icon: "🤝",
+                render: () => `
+                    <div class="fade-in max-w-4xl mx-auto pb-10">
+                        <h2 class="text-3xl md:text-5xl font-black text-slate-800 mb-6 flex items-center gap-4">
+                            🤝 Мистецтво Толерантності
+                        </h2>
+                        
+                        <div class="grid md:grid-cols-2 gap-6 mb-10 text-xl">
+                            <div class="bg-green-50 p-6 rounded-3xl border-2 border-green-100 shadow-sm">
+                                <h3 class="text-2xl font-bold text-green-800 mb-3">🌍 Що це таке?</h3>
+                                <p class="text-slate-700">16 листопада відзначають Міжнародний день толерантності. Це повага до права іншої людини бути собою. Ми всі різні, але рівні!</p>
+                            </div>
+                            <div class="bg-purple-50 p-6 rounded-3xl border-2 border-purple-100 shadow-sm">
+                                <h3 class="text-2xl font-bold text-purple-800 mb-3">⛔ Де межа?</h3>
+                                <p class="text-slate-700">Толерантність не означає терпіти зло чи порушення закону. Моя свобода закінчується там, де починається свобода іншого.</p>
+                            </div>
+                        </div>
+
+                        <!-- Simulator 3: Emoji Stereotypes -->
+                        <div class="bg-white p-8 rounded-3xl border-4 border-slate-100 shadow-lg mb-8">
+                            <h3 class="font-bold text-3xl text-slate-800 mb-6 text-center">🎭 Гра: Зруйнуй стереотипи!</h3>
+                            <p class="text-xl text-center text-slate-500 mb-8">Натисни на картку, щоб дізнатися, чи правильні наші упередження щодо людей.</p>
+                            
+                            <div class="grid sm:grid-cols-2 gap-6">
+                                ${generateEmojiCard('card1', '⚽ Хто може грати у футбол?', 'Будь-хто! 👦👧 Спорту байдуже на стать чи вік.')}
+                                ${generateEmojiCard('card2', '💻 Хто може бути крутим ІТ-шником?', 'Будь-хто! 👩‍🦰👨‍🦳 Головне — знання, а не зовнішність.')}
+                                ${generateEmojiCard('card3', '🎨 Хто любить рожевий колір?', 'Всі! 🧔‍♀️👱‍♂️ Кольори не мають статі, це просто кольори.')}
+                                ${generateEmojiCard('card4', '🦸 Хто може бути героєм?', 'Кожен з нас! 🧑‍🦽🏃‍♂️ Добрі вчинки роблять нас героями.')}
+                            </div>
+                        </div>
+
+                        <!-- Simulator 4: Scramble Word -->
+                        <div class="bg-indigo-900 p-8 rounded-3xl shadow-xl text-center border-4 border-indigo-700 mb-8 text-white relative overflow-hidden">
+                            <h3 class="font-bold text-3xl mb-4 text-accent-400">🧩 Челендж 3: Головне слово</h3>
+                            <p class="text-xl text-indigo-200 mb-8">Збери з переплутаних літер слово, яке є базою будь-яких хороших стосунків у суспільстві.</p>
+                            
+                            <div class="flex justify-center gap-2 mb-8">
+                                <div id="scramble-disp" class="text-4xl sm:text-5xl font-black tracking-[0.3em] sm:tracking-[0.5em] text-accent-400 bg-indigo-950 py-4 px-6 rounded-2xl shadow-inner border-2 border-indigo-800">
+                                    _ _ _ _ _ _
+                                </div>
+                            </div>
+                            
+                            <div class="flex flex-wrap justify-center gap-4 mb-6" id="scramble-btns">
+                                <button onclick="clickLetter(this, 'А')" class="px-6 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-3xl font-bold shadow-[0_5px_0_#312E81] active:translate-y-1 active:shadow-none transition">А</button>
+                                <button onclick="clickLetter(this, 'В')" class="px-6 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-3xl font-bold shadow-[0_5px_0_#312E81] active:translate-y-1 active:shadow-none transition">В</button>
+                                <button onclick="clickLetter(this, 'О')" class="px-6 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-3xl font-bold shadow-[0_5px_0_#312E81] active:translate-y-1 active:shadow-none transition">О</button>
+                                <button onclick="clickLetter(this, 'П')" class="px-6 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-3xl font-bold shadow-[0_5px_0_#312E81] active:translate-y-1 active:shadow-none transition">П</button>
+                                <button onclick="clickLetter(this, 'А')" class="px-6 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-3xl font-bold shadow-[0_5px_0_#312E81] active:translate-y-1 active:shadow-none transition">А</button>
+                                <button onclick="clickLetter(this, 'Г')" class="px-6 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-3xl font-bold shadow-[0_5px_0_#312E81] active:translate-y-1 active:shadow-none transition">Г</button>
+                            </div>
+                            
+                            <button onclick="resetScramble()" class="text-indigo-300 underline hover:text-white text-lg">Скинути літери</button>
+                            <div id="scramble-result" class="hidden mt-6 text-2xl font-bold"></div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 3,
+                title: "3. Життя у смартфоні",
+                icon: "📱",
+                render: () => `
+                    <div class="fade-in max-w-4xl mx-auto pb-10">
+                        <h2 class="text-3xl md:text-5xl font-black text-slate-800 mb-6 flex items-center gap-4">
+                            📱 Життя у смартфоні
+                        </h2>
+                        
+                        <p class="text-2xl text-slate-700 mb-8 leading-relaxed bg-primary-50 p-6 rounded-3xl border-2 border-primary-200 shadow-sm">
+                            16 листопада також святкують День працівників радіо, телебачення та зв'язку. Сьогодні наш головний зв'язок — це інтернет. 
+                            У мережі діють ті самі правила: <b>кібербулінг</b> — це злочин проти гідності, а <b>фейки</b> — це крадіжка правди. Зберігай інформаційну гігієну!
+                        </p>
+
+                        <!-- Simulator 5: Fake Detector -->
+                        <div class="bg-teal-900 text-white p-8 rounded-3xl border-4 border-teal-600 shadow-xl text-center mb-8">
+                            <h3 class="font-black text-3xl mb-2 text-accent-400">🕵️ Челендж 4: Детектор Фейків</h3>
+                            <p class="text-xl text-teal-200 mb-8">Оціни критично заголовок новини. Чи можна йому вірити?</p>
+                            
+                            <div class="text-2xl bg-teal-800 p-8 rounded-2xl mb-8 font-bold border-2 border-teal-600" id="fake-text">
+                                ШОК! Знайдено ліки від усіх хвороб, достатньо лише...
+                            </div>
+                            
+                            <div class="flex flex-col sm:flex-row gap-4 justify-center" id="fake-btns">
+                                <button onclick="checkFake(false)" class="px-10 py-5 bg-green-600 hover:bg-green-500 text-white font-black text-2xl rounded-2xl transition-all shadow-[0_6px_0_#166534] active:translate-y-1 active:shadow-none">ПРАВДА ✅</button>
+                                <button onclick="checkFake(true)" class="px-10 py-5 bg-red-600 hover:bg-red-500 text-white font-black text-2xl rounded-2xl transition-all shadow-[0_6px_0_#991B1B] active:translate-y-1 active:shadow-none">ФЕЙК ❌</button>
+                            </div>
+                            <div id="fake-result" class="hidden mt-8 text-2xl font-bold text-accent-400"></div>
+                        </div>
+
+                        <!-- Simulator 6: Strong Password -->
+                        <div class="bg-fuchsia-900 text-white p-8 rounded-3xl border-4 border-fuchsia-600 shadow-xl text-center mb-8">
+                            <h3 class="font-black text-3xl mb-2 text-accent-400">🔐 Челендж 5: Сейф-Пароль</h3>
+                            <p class="text-xl text-fuchsia-200 mb-6">Створи надійний пароль для свого акаунту (не використовуй реальний пароль!).</p>
+                            
+                            <input type="text" id="pass-input" oninput="checkPass()" class="w-full max-w-md mx-auto block px-6 py-4 rounded-2xl text-slate-900 text-2xl font-bold mb-6 text-center shadow-inner focus:outline-none focus:ring-4 focus:ring-fuchsia-400" placeholder="Введи пароль...">
+                            
+                            <div class="flex flex-col items-start max-w-sm mx-auto space-y-3 text-lg font-medium bg-fuchsia-950 p-6 rounded-2xl border-2 border-fuchsia-800">
+                                <div id="req-len" class="text-fuchsia-300 transition-colors">❌ Мінімум 8 символів</div>
+                                <div id="req-up" class="text-fuchsia-300 transition-colors">❌ Велика літера</div>
+                                <div id="req-num" class="text-fuchsia-300 transition-colors">❌ Цифра</div>
+                                <div id="req-sym" class="text-fuchsia-300 transition-colors">❌ Спеціальний символ (@, #, $, тощо)</div>
+                            </div>
+                            
+                            <div id="pass-result" class="hidden mt-6 text-2xl font-bold text-accent-400 animate-pulse"></div>
+                        </div>
+
+                        <!-- Simulator 7: Toxic Filter -->
+                        <div class="bg-rose-900 text-white p-8 rounded-3xl border-4 border-rose-600 shadow-xl text-center mb-8">
+                            <h3 class="font-black text-3xl mb-2 text-accent-400">🛡️ Челендж 6: Фільтр Хейту</h3>
+                            <p class="text-xl text-rose-200 mb-8">Видали (🗑️) токсичні коментарі з чату, щоб зберегти приємний і дружній простір.</p>
+                            
+                            <div class="space-y-4 max-w-lg mx-auto text-left">
+                                <div class="flex justify-between items-center bg-rose-800 p-4 rounded-xl border border-rose-700 transition-all duration-300" id="comm-1">
+                                    <span class="text-lg">Ти молодець, класне відео! 👍</span>
+                                    <button onclick="removeToxic(1, false)" class="text-3xl hover:scale-125 transition-transform drop-shadow-md">🗑️</button>
+                                </div>
+                                <div class="flex justify-between items-center bg-rose-800 p-4 rounded-xl border border-rose-700 transition-all duration-300" id="comm-2">
+                                    <span class="text-lg">Ну ти і лузер, видали це...</span>
+                                    <button onclick="removeToxic(2, true)" class="text-3xl hover:scale-125 transition-transform drop-shadow-md">🗑️</button>
+                                </div>
+                                <div class="flex justify-between items-center bg-rose-800 p-4 rounded-xl border border-rose-700 transition-all duration-300" id="comm-3">
+                                    <span class="text-lg">Дякую за корисну інформацію!</span>
+                                    <button onclick="removeToxic(3, false)" class="text-3xl hover:scale-125 transition-transform drop-shadow-md">🗑️</button>
+                                </div>
+                                <div class="flex justify-between items-center bg-rose-800 p-4 rounded-xl border border-rose-700 transition-all duration-300" id="comm-4">
+                                    <span class="text-lg">Твій голос просто жах 🤮</span>
+                                    <button onclick="removeToxic(4, true)" class="text-3xl hover:scale-125 transition-transform drop-shadow-md">🗑️</button>
+                                </div>
+                            </div>
+                            
+                            <div id="toxic-result" class="hidden mt-8 text-2xl font-bold"></div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 4,
+                title: "4. Вікторина",
+                icon: "📝",
+                render: () => `
+                    <div class="fade-in max-w-4xl mx-auto pb-10">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                            <h2 class="text-3xl md:text-5xl font-black text-slate-800">
+                                📝 Підсумкова Вікторина
+                            </h2>
+                            <div class="bg-primary-600 text-white px-6 py-3 rounded-2xl font-bold text-2xl shadow-lg">
+                                Твій рахунок: ${score}/12
+                            </div>
+                        </div>
+                        
+                        <p class="text-2xl text-slate-600 mb-8">Перевіримо, як уважно ви слухали! За кожну правильну відповідь нараховується 1 бал.</p>
+
+                        ${generateQuiz(1, "Питання 1", 
+                            "Коли в Україні відзначають День Гідності та Свободи?",
+                            [
+                                { text: "24 серпня", correct: false, reason: "Це День Незалежності." },
+                                { text: "21 листопада", correct: true, reason: "Абсолютно точно! Це дата початку двох революцій." },
+                                { text: "1 грудня", correct: false, reason: "Ні, ця дата пов'язана з іншими подіями." }
+                            ]
+                        )}
+
+                        ${generateQuiz(2, "Питання 2", 
+                            "Що означає слово «толерантність»?",
+                            [
+                                { text: "Терпіти будь-які образи на свою адресу", correct: false, reason: "Ні, толерантність не означає втрату власної гідності." },
+                                { text: "Повага до права інших бути собою", correct: true, reason: "Правильно! Це прийняття того, що люди різні." },
+                                { text: "Байдужість до всього, що відбувається", correct: false, reason: "Толерантність — це активна повага, а не байдужість." }
+                            ]
+                        )}
+
+                        ${generateQuiz(3, "Питання 3", 
+                            "Які дві події вшановують у День Гідності та Свободи?",
+                            [
+                                { text: "Помаранчеву революцію та Революцію Гідності", correct: true, reason: "Саме так! Події 2004 та 2013-2014 років." },
+                                { text: "Проголошення Незалежності та День Конституції", correct: false, reason: "Ці свята відзначають влітку." },
+                                { text: "Студентську революцію на граніті та Майдан", correct: false, reason: "Революція на граніті була раніше, у 1990 році." }
+                            ]
+                        )}
+
+                        ${generateQuiz(4, "Питання 4", 
+                            "Коли відзначають Міжнародний день толерантності?",
+                            [
+                                { text: "1 вересня", correct: false, reason: "Це День знань." },
+                                { text: "16 листопада", correct: true, reason: "Правильно! Це свято було запроваджено ЮНЕСКО." },
+                                { text: "1 червня", correct: false, reason: "Це День захисту дітей." }
+                            ]
+                        )}
+
+                        ${generateQuiz(5, "Питання 5", 
+                            "Що таке кібербулінг?",
+                            [
+                                { text: "Захист комп'ютера від вірусів", correct: false, reason: "Це кібербезпека." },
+                                { text: "Цькування, образи або погрози в інтернеті", correct: true, reason: "Так! Це дуже небезпечне явище, з яким треба боротися." },
+                                { text: "Реклама у соціальних мережах", correct: false, reason: "Це називається таргетинг або просто спам." }
+                            ]
+                        )}
+
+                        ${generateQuiz(6, "Питання 6", 
+                            "Що слід зробити, якщо ти бачиш дуже емоційний і скандальний заголовок новини?",
+                            [
+                                { text: "Одразу репостнути всім друзям", correct: false, reason: "Так поширюються фейки!" },
+                                { text: "Перевірити джерело та пошукати інші підтвердження", correct: true, reason: "Правильно! Емоції часто використовують для маніпуляцій." },
+                                { text: "Написати гнівний коментар", correct: false, reason: "Це лише підніме популярність фейку." }
+                            ]
+                        )}
+
+                        ${generateQuiz(7, "Питання 7", 
+                            "Чи правда, що бути толерантним означає погоджуватися з будь-якою думкою?",
+                            [
+                                { text: "Так, треба завжди погоджуватися", correct: false, reason: "Ні, ти маєш право на власну думку." },
+                                { text: "Ні, це означає поважати право людини на іншу думку, навіть якщо ти з нею не згоден", correct: true, reason: "Абсолютно правильно!" }
+                            ]
+                        )}
+
+                        ${generateQuiz(8, "Питання 8", 
+                            "Що таке «фейк» в інтернеті?",
+                            [
+                                { text: "Правдива, але нецікава новина", correct: false, reason: "Це просто нудна новина." },
+                                { text: "Спеціально вигадана або перекручена інформація для обману", correct: true, reason: "Так, фейки створюють для маніпуляції суспільством." },
+                                { text: "Новий молодіжний тренд у TikTok", correct: false, reason: "Фейки існують скрізь, це не розвага." }
+                            ]
+                        )}
+
+                        ${generateQuiz(9, "Питання 9", 
+                            "Як правильно захищати свої особисті кордони в соцмережах?",
+                            [
+                                { text: "Додавати всіх підряд у друзі", correct: false, reason: "Це небезпечно для приватності." },
+                                { text: "Не ділитися особистими даними та блокувати тих, хто тебе ображає", correct: true, reason: "Правильно! Ти маєш право на безпечний цифровий простір." },
+                                { text: "Видалити всі свої акаунти назавжди", correct: false, reason: "Це занадто радикально, достатньо дотримуватись правил безпеки." }
+                            ]
+                        )}
+
+                        ${generateQuiz(10, "Питання 10", 
+                            "Яке місце в Києві стало головним символом Революції Гідності?",
+                            [
+                                { text: "Майдан Незалежності", correct: true, reason: "Так, саме там відбувалися найважливіші та найтрагічніші події." },
+                                { text: "Софійська площа", correct: false, reason: "Там також збиралися люди, але серцем був Майдан." },
+                                { text: "Контрактова площа", correct: false, reason: "Це історичне місце, але не епіцентр революції." }
+                            ]
+                        )}
+
+                        ${generateQuiz(11, "Питання 11", 
+                            "Чому двофакторна автентифікація (2FA) є важливою?",
+                            [
+                                { text: "Вона робить інтернет швидшим", correct: false, reason: "Це не впливає на швидкість інтернету." },
+                                { text: "Це додатковий рівень захисту твого акаунта від зламу", correct: true, reason: "Правильно! Навіть якщо хтось дізнається пароль, він не зайде без коду." },
+                                { text: "Це просто нав'язлива реклама від розробників", correct: false, reason: "Це базовий стандарт безпеки." }
+                            ]
+                        )}
+
+                        ${generateQuiz(12, "Питання 12", 
+                            "Де, згідно з правилами толерантності, закінчується свобода однієї людини?",
+                            [
+                                { text: "Там, де починається свобода іншої", correct: true, reason: "Це золоте правило толерантності та демократії!" },
+                                { text: "Вона ніколи не закінчується", correct: false, reason: "Абсолютна свобода без меж призводить до хаосу." },
+                                { text: "Коли закінчуються гроші на інтернеті", correct: false, reason: "Це смішно, але неправильно :)" }
+                            ]
+                        )}
+                    </div>
+                `
+            },
+            {
+                id: 5,
+                title: "5. Підсумок",
+                icon: "🏅",
+                render: () => {
+                    let message = "";
+                    let bgColor = "";
+                    let emoji = "";
+                    
+                    if (score <= 5) {
+                        message = "Гарна спроба! Тобі ще є чому повчитися у сфері медіаграмотності та історії. Пам'ятай: твоя гідність і свобода — це найцінніше. Будь уважним у мережі та поважай інших!";
+                        bgColor = "bg-blue-50 border-blue-200 text-blue-900";
+                        emoji = "🌱";
+                    } else if (score <= 9) {
+                        message = "Чудовий результат! Ти добре знаєш історію своєї країни та розумієш, як поводитися в інтернеті. Продовжуй розвивати критичне мислення і завжди захищай свої кордони!";
+                        bgColor = "bg-primary-50 border-primary-300 text-primary-900";
+                        emoji = "🚀";
+                    } else {
+                        message = "Блискуче! Ти справжній свідомий громадянин і крутий знавець цифрової гігієни! Ти поважаєш себе та інших, відрізняєш правду від фейків і знаєш ціну свободи. Так тримати!";
+                        bgColor = "bg-accent-50 border-accent-400 text-accent-900";
+                        emoji = "👑";
+                    }
+
+                    return `
+                    <div class="fade-in max-w-4xl mx-auto text-center py-10">
+                        <h2 class="text-4xl md:text-6xl font-black text-slate-800 mb-10">
+                            🎉 Фінальний результат
+                        </h2>
+                        
+                        <div class="inline-block relative mb-12">
+                            <div class="w-56 h-56 rounded-full bg-white flex items-center justify-center border-[12px] border-primary-500 shadow-2xl mx-auto relative z-10">
+                                <span class="text-8xl font-black text-primary-600">${score}<span class="text-5xl text-primary-300">/12</span></span>
+                            </div>
+                            <div class="absolute -top-6 -right-6 text-7xl animate-bounce z-20 drop-shadow-lg">${emoji}</div>
+                            <div class="absolute inset-0 bg-primary-200 rounded-full blur-3xl opacity-50 z-0"></div>
+                        </div>
+
+                        <div class="p-10 rounded-[2rem] border-4 ${bgColor} shadow-xl mb-10">
+                            <p class="text-3xl font-bold leading-relaxed">${message}</p>
+                        </div>
+
+                        <button onclick="navigate(1); resetGame();" class="mt-8 px-10 py-5 bg-slate-800 text-white font-black text-2xl rounded-3xl hover:bg-slate-700 transition shadow-2xl hover:-translate-y-1">
+                            🔄 Почати спочатку
+                        </button>
+                    </div>
+                `
+                }
+            }
+        ];
+
+        // --- Helpers ---
+        function generateEmojiCard(id, question, answer) {
+            return `
+                <div class="emoji-card bg-primary-50 border-2 border-primary-100 p-6 rounded-3xl text-center flex flex-col justify-center min-h-[150px]" onclick="document.getElementById('ans-${id}').classList.remove('hidden')">
+                    <div class="text-xl font-bold text-slate-800 mb-2">${question}</div>
+                    <div class="text-sm font-bold text-primary-500 uppercase mb-2">Натисни, щоб відкрити правду</div>
+                    <div id="ans-${id}" class="hidden text-xl font-black text-primary-800 bg-white p-4 rounded-xl shadow-inner mt-4 border-2 border-primary-200 fade-in">
+                        ✨ ${answer}
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateQuiz(id, title, desc, answers) {
+            let btns = answers.map((ans) => `
+                <button onclick="answerQuiz(${id}, ${ans.correct}, this, '${ans.reason.replace(/'/g, "\\'")}')" 
+                        class="text-left p-6 text-xl md:text-2xl font-bold border-4 border-slate-100 rounded-3xl hover:bg-primary-50 hover:border-primary-200 transition w-full shadow-sm mb-4">
+                    ${ans.text}
+                </button>
+            `).join('');
+
+            return `
+                <div class="mb-12 border-4 border-slate-100 rounded-[2rem] overflow-hidden shadow-lg bg-white">
+                    <div class="bg-primary-50 p-6 md:p-8 border-b-4 border-slate-100">
+                        <h3 class="font-black text-2xl md:text-3xl flex items-center gap-3 mb-4 text-primary-800">${title}</h3>
+                        <p class="text-xl md:text-2xl text-slate-700 leading-relaxed font-semibold">${desc}</p>
+                    </div>
+                    <div class="p-6 md:p-8" id="quiz-${id}-container">
+                        <div class="flex flex-col">
+                            ${btns}
+                        </div>
+                        <div id="quiz-${id}-feedback" class="mt-6 text-xl md:text-2xl font-bold hidden p-6 rounded-2xl border-4"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Core Navigation ---
+        function initApp() {
+            renderNav();
+            renderContent();
+        }
+
+        function renderNav() {
+            const navContainer = document.getElementById('nav-container');
+            navContainer.innerHTML = blocks.map(block => `
+                <button onclick="navigate(${block.id})" 
+                    class="flex items-center gap-4 text-left w-full px-4 py-4 rounded-2xl transition-all duration-200 border-4 ${
+                        activeBlockId === block.id 
+                        ? 'bg-primary-600 border-primary-600 text-white shadow-xl scale-[1.02]' 
+                        : 'bg-white border-transparent text-slate-600 hover:bg-primary-50 hover:border-primary-100'
+                    }">
+                    <span class="text-3xl drop-shadow-md">${block.icon}</span>
+                    <span class="text-lg md:text-xl font-black leading-tight">${block.title.split('. ')[1] || block.title}</span>
+                </button>
+            `).join('');
+        }
+
+        function renderContent() {
+            const contentArea = document.getElementById('content-area');
+            const block = blocks.find(b => b.id === activeBlockId);
+            contentArea.innerHTML = block.render();
+            contentArea.scrollTop = 0;
+            resetSimulators();
+        }
+
+        function navigate(id) {
+            activeBlockId = id;
+            renderNav();
+            renderContent();
+        }
+
+        function resetGame() {
+            score = 0;
+            answeredQuizzes.clear();
+            document.getElementById('score-display').innerText = score;
+        }
+
+        function resetSimulators() {
+            // Block 1
+            currentBalance = 0;
+            balanceScoreVal = 0;
+            lightsCount = 0;
+
+            // Block 2
+            currentScramble = "";
+            clickedLetters = [];
+
+            // Block 3
+            currentFake = 0;
+            fakeScore = 0;
+            toxicLeft = 2;
+        }
+
+        // --- Simulators Logic ---
+        
+        // 1. Balance Logic
+        function checkBalance(isRightSelection) {
+            if(currentBalance >= balanceQuestions.length) return;
+            
+            let q = balanceQuestions[currentBalance];
+            if (q.isRight === isRightSelection) {
+                balanceScoreVal++;
+            }
+            currentBalance++;
+            
+            if (currentBalance < balanceQuestions.length) {
+                document.getElementById('balance-text').innerText = balanceQuestions[currentBalance].text;
+            } else {
+                document.getElementById('balance-btns').classList.add('hidden');
+                let res = document.getElementById('balance-result');
+                res.classList.remove('hidden');
+                res.innerHTML = `Аналіз завершено! Твій результат: <b>${balanceScoreVal}/${balanceQuestions.length}</b> правильних.`;
+            }
+        }
+
+        // 2. Lights Logic
+        function turnOnLight(el) {
+            if(!el.dataset.on) {
+                el.dataset.on = "1";
+                el.classList.remove('grayscale', 'opacity-50');
+                el.classList.add('drop-shadow-[0_0_15px_rgba(250,204,21,0.8)]', 'scale-110');
+                lightsCount++;
+                if(lightsCount === 5) {
+                    let res = document.getElementById('lights-result');
+                    res.classList.remove('hidden');
+                    res.classList.add('fade-in');
+                    res.innerHTML = "Світло перемагає темряву, коли ми об'єднуємо зусилля! 🌟";
+                }
+            }
+        }
+
+        // 3. Scramble Word Logic
+        function clickLetter(btn, letter) {
+            currentScramble += letter;
+            clickedLetters.push(btn);
+            btn.classList.add('opacity-30', 'cursor-not-allowed', 'pointer-events-none');
+            btn.classList.remove('active:translate-y-1', 'active:shadow-none');
+            
+            let disp = document.getElementById('scramble-disp');
+            let padded = currentScramble.padEnd(6, '_');
+            disp.innerText = padded.split('').join(' ');
+            
+            if (currentScramble.length === 6) {
+                let res = document.getElementById('scramble-result');
+                res.classList.remove('hidden');
+                if (currentScramble === scrambleWord) {
+                    res.innerHTML = "Правильно! Основа толерантності — це ПОВАГА. 🤝";
+                    res.classList.add('text-accent-400');
+                    res.classList.remove('text-red-400');
+                } else {
+                    res.innerHTML = "Слово зібрано неправильно. Спробуй ще!";
+                    res.classList.add('text-red-400');
+                    res.classList.remove('text-accent-400');
+                }
+            }
+        }
+
+        function resetScramble() {
+            currentScramble = "";
+            clickedLetters.forEach(btn => {
+                btn.classList.remove('opacity-30', 'cursor-not-allowed', 'pointer-events-none');
+                btn.classList.add('active:translate-y-1', 'active:shadow-none');
+            });
+            clickedLetters = [];
+            document.getElementById('scramble-disp').innerText = "_ _ _ _ _ _";
+            document.getElementById('scramble-result').classList.add('hidden');
+        }
+
+        // 4. Fake Detector Logic
+        function checkFake(isFakeSelection) {
+            if (currentFake >= fakeNews.length) return;
+            
+            let q = fakeNews[currentFake];
+            if (q.isFake === isFakeSelection) {
+                fakeScore++;
+            }
+            currentFake++;
+            
+            if (currentFake < fakeNews.length) {
+                document.getElementById('fake-text').innerText = fakeNews[currentFake].title;
+            } else {
+                document.getElementById('fake-btns').classList.add('hidden');
+                let res = document.getElementById('fake-result');
+                res.classList.remove('hidden');
+                res.innerHTML = `Перевірку завершено! Ти розпізнав: <b>${fakeScore}/${fakeNews.length}</b>. Довіряй, але перевіряй! 🕵️‍♂️`;
+            }
+        }
+        
+        // 5. Password Logic
+        function checkPass() {
+            const val = document.getElementById('pass-input').value;
+            const reqLen = val.length >= 8;
+            const reqUp = /[A-ZА-ЯІЇЄ]/i.test(val) && val.toLowerCase() !== val; // check for true uppercase
+            const reqNum = /[0-9]/.test(val);
+            const reqSym = /[^A-ZА-ЯІЇЄa-zа-яіїє0-9\s]/i.test(val);
+
+            const elLen = document.getElementById('req-len');
+            const elUp = document.getElementById('req-up');
+            const elNum = document.getElementById('req-num');
+            const elSym = document.getElementById('req-sym');
+
+            elLen.innerHTML = reqLen ? "✅ Мінімум 8 символів" : "❌ Мінімум 8 символів";
+            elLen.className = reqLen ? "text-green-400 font-bold transition-colors" : "text-fuchsia-300 transition-colors";
+
+            elUp.innerHTML = reqUp ? "✅ Велика літера" : "❌ Велика літера";
+            elUp.className = reqUp ? "text-green-400 font-bold transition-colors" : "text-fuchsia-300 transition-colors";
+
+            elNum.innerHTML = reqNum ? "✅ Цифра" : "❌ Цифра";
+            elNum.className = reqNum ? "text-green-400 font-bold transition-colors" : "text-fuchsia-300 transition-colors";
+
+            elSym.innerHTML = reqSym ? "✅ Спеціальний символ (@, #, тощо)" : "❌ Спеціальний символ (@, #, тощо)";
+            elSym.className = reqSym ? "text-green-400 font-bold transition-colors" : "text-fuchsia-300 transition-colors";
+            
+            let res = document.getElementById('pass-result');
+            if (reqLen && reqUp && reqNum && reqSym) {
+               res.classList.remove('hidden');
+               res.innerHTML = "Супер! Твій акаунт тепер надійно захищено. 🛡️";
+            } else {
+               res.classList.add('hidden');
+            }
+        }
+        
+        // 6. Toxic Filter Logic
+        function removeToxic(id, isToxic) {
+            let el = document.getElementById('comm-' + id);
+            let res = document.getElementById('toxic-result');
+            
+            if (isToxic) {
+                el.style.opacity = '0';
+                el.style.transform = 'scale(0.9)';
+                setTimeout(() => el.style.display = 'none', 300);
+                
+                toxicLeft--;
+                if (toxicLeft === 0) {
+                    res.classList.remove('hidden');
+                    res.classList.add('fade-in');
+                    res.innerHTML = "Молодець! Токсичні коментарі видалено. У мережі стало чистіше! ✨";
+                    res.classList.add('text-accent-400');
+                    res.classList.remove('text-red-400');
+                }
+            } else {
+                res.classList.remove('hidden');
+                res.innerHTML = "Обережно! Ти намагаєшся видалити позитивний коментар! 🚫";
+                res.classList.remove('text-accent-400');
+                res.classList.add('text-red-400');
+                setTimeout(() => res.classList.add('hidden'), 2500);
+            }
+        }
+
+        // --- Quiz Logic ---
+        function answerQuiz(quizId, isCorrect, btnElement, reason) {
+            const container = document.getElementById(`quiz-${quizId}-container`);
+            const feedback = document.getElementById(`quiz-${quizId}-feedback`);
+            
+            if (!answeredQuizzes.has(quizId)) {
+                if (isCorrect) {
+                    score++;
+                    document.getElementById('score-display').innerText = score;
+                    const globalScore = document.querySelector('header #score-display');
+                    if(globalScore) globalScore.innerText = score;
+                }
+                answeredQuizzes.add(quizId);
+            }
+
+            const buttons = container.querySelectorAll('button');
+            buttons.forEach(b => {
+                b.disabled = true;
+                b.classList.add('opacity-50', 'cursor-not-allowed');
+                b.classList.remove('hover:bg-primary-50', 'hover:border-primary-200');
+            });
+            
+            btnElement.classList.remove('opacity-50');
+            feedback.style.display = 'block';
+            feedback.classList.remove('hidden', 'fade-in');
+            void feedback.offsetWidth;
+            feedback.classList.add('fade-in');
+            
+            if(isCorrect) {
+                btnElement.classList.add('bg-green-100', 'border-green-500', 'text-green-900');
+                feedback.className = "mt-6 text-xl md:text-2xl p-6 rounded-3xl bg-green-50 border-4 border-green-300 text-green-900 fade-in";
+                feedback.innerHTML = `<b>✅ Правильно!</b><br><span class="text-lg md:text-xl font-medium mt-3 inline-block">${reason}</span>`;
+            } else {
+                btnElement.classList.add('bg-red-100', 'border-red-500', 'text-red-900');
+                
+                buttons.forEach(b => {
+                    if(b.getAttribute('onclick').includes('true')) {
+                        b.classList.remove('opacity-50');
+                        b.classList.add('border-green-400', 'bg-green-50');
+                    }
+                });
+
+                feedback.className = "mt-6 text-xl md:text-2xl p-6 rounded-3xl bg-red-50 border-4 border-red-300 text-red-900 fade-in";
+                feedback.innerHTML = `<b>❌ Помилка!</b><br><span class="text-lg md:text-xl font-medium mt-3 inline-block">${reason}</span>`;
+            }
+        }
+
+        // Init App on Load
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
